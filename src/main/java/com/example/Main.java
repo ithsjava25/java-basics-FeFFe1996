@@ -1,5 +1,7 @@
 package com.example;
 import com.example.api.ElpriserAPI;
+
+import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -21,6 +23,20 @@ public class Main {
             for (int i = 0; i < args.length; i++){
                 if (args[i].equals("--zone")){
                     zone = args[i+1];
+                    boolean checkIfTrue = false;
+                    //todo fix if statement
+                    for (int j = 0; j < validZones.length; j++){
+                        if (zone.equalsIgnoreCase(validZones[j])){
+                            checkIfTrue = true;
+                        } else {
+                            checkIfTrue = false;
+                        }
+                        if (checkIfTrue){
+                            zone = args[i+1];
+                            break;
+                        }
+
+                    }
                     if (zone.equalsIgnoreCase("SE1")){
                         zone = args[i+1];
                     }else if (zone.equalsIgnoreCase("SE2")){
@@ -29,12 +45,11 @@ public class Main {
                         zone = args[i+1];
                     }else if (zone.equalsIgnoreCase("SE4")){
                         zone = args[i+1];
-                    }else{
-                        System.out.println("zone is required");
-                        helpInfo();
+                    } else if (checkIfTrue == false) {
+                        System.out.println("zone required");
+                        break;
                     }
                 }
-
                 else if (args[i].equals("--date")){
                     date = args[i+1];
                 }
@@ -130,7 +145,10 @@ public class Main {
             sortedArr[iterator] = revArr[i-1];
             iterator++;
         }
-        System.out.println(Arrays.toString(sortedArr));
+
+        for (int p = 0; p < dataLength; p++){
+            System.out.println(sortedArr[p]);
+        }
     }
 
     private static void printValues(double[] priceArr, String[] timeStart, String[] timeEnd, int dataLength, int hours) {
