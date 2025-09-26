@@ -4,14 +4,16 @@ import com.example.api.ElpriserAPI;
 
 import java.text.DecimalFormat;
 
-import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
+
 
 public class Main {
     public static void main(String[] args) {
         ElpriserAPI elpriserAPI = new ElpriserAPI();
         String zone = "";
         String date = "";
+        String charging = "";
+        int hours = 0;
         if (args.length == 0){
             helpInfo();
         } else{
@@ -24,81 +26,55 @@ public class Main {
                 }
                 else if (args[i].equals("--sorted")) {
                     System.out.println("shall return sorted soon");
+
+                }else if (args[i].equals("--charging")) {
+                    charging = args[i+1];
+                    hours = Integer.parseInt(charging.substring(0, 1));
                 }
                 else if (args[i].equals("--help")) {
                     helpInfo();
                 }
         }
-
-
         }
         if (!date.isEmpty() && !zone.isEmpty()) {
-            getElpriser(elpriserAPI, date, zone);
+            getElpriser(elpriserAPI, date, zone, hours);
         }
         if (date.isEmpty() && !zone.isEmpty()) {
-            getElpriser(elpriserAPI, zone);
+            getElpriser(elpriserAPI, zone, hours);
         }
-
-
     }
 
 
-    private static void getElpriser(ElpriserAPI elpriserAPI, String zone) {
+    private static void getElpriser(ElpriserAPI elpriserAPI, String date, String zone, int hours) {
+        int dataLength = getDataLength(elpriserAPI, date, zone);
+        double[] priceArr = new double[dataLength];
+        String[] timeStart =  new String[dataLength];
+        String[] timeEnd =  new String[dataLength];
+        for (int i = 0; i < dataLength; i++){
+            priceArr[i] = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).sekPerKWh();
+            timeStart[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
+            timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
+        }
+        printValues(priceArr, timeStart, timeEnd, dataLength, hours);
+        ChargeWindow(priceArr, timeStart, timeEnd, dataLength, hours);
+    }
+
+    private static void getElpriser(ElpriserAPI elpriserAPI, String zone, int hours) {
         String date = LocalDate.now().toString();
         int dataLength = getDataLength(elpriserAPI, date, zone);
-        String[] getData = new String[dataLength];
-        Double[] splitArray = new Double[dataLength];
-        String[] dataArray = new String[dataLength];
-        DecimalFormat df = new DecimalFormat("##,00");
-        for (int i = 0; i < dataLength; i++) {
-            getData[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i));
-
+        double[] priceArr = new double[dataLength];
+        String[] timeStart =  new String[dataLength];
+        String[] timeEnd =  new String[dataLength];
+        for (int i = 0; i < dataLength; i++){
+            priceArr[i] = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).sekPerKWh();
+            timeStart[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
+            timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
         }
-
-        double value = 0;
-        double minValue = 1;
-        double maxValue = 0;
-        String minTimeStart = "";
-        String minTimeEnd = "";
-        String maxTimeStart = "";
-        String maxTimeEnd = "";
-        for (int a = 0; a < 24; a++) { //for loop to add the values of pricesArray
-            value += getSekPerKWh(elpriserAPI, date, zone, a);
-            if(minValue > getSekPerKWh(elpriserAPI, date, zone, a)){
-                minValue = getSekPerKWh(elpriserAPI, date, zone, a);
-                minTimeStart = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(a).timeStart());
-                minTimeEnd = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(a).timeEnd());
-                minTimeStart = minTimeStart.substring(minTimeStart.indexOf("T")+1, minTimeStart.indexOf("T")+3);
-                minTimeEnd =  minTimeEnd.substring(minTimeEnd.indexOf("T")+1, minTimeEnd.indexOf("T")+3);
-            } if(maxValue < getSekPerKWh(elpriserAPI, date, zone, a)){
-                maxValue = getSekPerKWh(elpriserAPI, date, zone, a);
-                maxTimeStart = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(a).timeStart());
-                maxTimeEnd = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(a).timeEnd());
-                maxTimeStart = maxTimeStart.substring(maxTimeStart.indexOf("T")+1, maxTimeStart.indexOf("T")+3);
-                maxTimeEnd = maxTimeEnd.substring(maxTimeEnd.indexOf("T")+1, maxTimeEnd.indexOf("T")+3);
-            }
-        }
-        value = value / dataLength;
-        value = value*100;
-        int mean = (int) value;
-        minValue *= 100;
-        maxValue *= 100;
-        System.out.println(" ");
-        System.out.println("medelpris " + mean);
-        System.out.println("lägsta pris " + minValue + " " + minTimeStart + "-" + minTimeEnd);
-        System.out.println("högsta pris " + maxValue + " " + maxTimeStart + "-" + maxTimeEnd);
+        printValues(priceArr, timeStart, timeEnd, dataLength, hours);
+        ChargeWindow(priceArr, timeStart, timeEnd, dataLength, hours);
     }
 
-    private static void getElpriser(ElpriserAPI elpriserAPI, String date, String zone) {
-        int dataLength = getDataLength(elpriserAPI, date, zone);
-        String[] getData = new String[dataLength];
-        Double[] splitArray = new Double[dataLength];
-        String[] dataArray = new String[dataLength];
-        DecimalFormat df = new DecimalFormat("##,00");
-        for (int i = 0; i < dataLength; i++) {
-            getData[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i));
-        }
-
+    private static void printValues(double[] priceArr, String[] timeStart, String[] timeEnd, int dataLength, int hours) {
         double value = 0;
         double minValue = 1;
         double maxValue = 0;
@@ -107,41 +83,69 @@ public class Main {
         String maxTimeStart = "";
         String maxTimeEnd = "";
         for (int a = 0; a < dataLength; a++) { //for loop to add the values of pricesArray
-            value += elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(a).sekPerKWh();
-            if(minValue > getSekPerKWh(elpriserAPI, date, zone, a)){
-                minValue = getSekPerKWh(elpriserAPI, date, zone, a);
-                minTimeStart = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(a).timeStart());
-                minTimeEnd = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(a).timeEnd());
+            value += priceArr[a];
+            if(minValue > priceArr[a]){
+                minValue = priceArr[a];
+                minTimeStart = timeStart[a];
+                minTimeEnd = timeEnd[a];
                 minTimeStart = minTimeStart.substring(minTimeStart.indexOf("T")+1, minTimeStart.indexOf("T")+3);
                 minTimeEnd =  minTimeEnd.substring(minTimeEnd.indexOf("T")+1, minTimeEnd.indexOf("T")+3);
-            } if(maxValue < getSekPerKWh(elpriserAPI, date, zone, a)){
-                maxValue = getSekPerKWh(elpriserAPI, date, zone, a);
-                maxTimeStart = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(a).timeStart());
-                maxTimeEnd = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(a).timeEnd());
+            } if(maxValue < priceArr[a]){
+                maxValue = priceArr[a];
+                maxTimeStart = timeStart[a];;
+                maxTimeEnd = timeEnd[a];
                 maxTimeStart = maxTimeStart.substring(maxTimeStart.indexOf("T")+1, maxTimeStart.indexOf("T")+3);
                 maxTimeEnd = maxTimeEnd.substring(maxTimeEnd.indexOf("T")+1, maxTimeEnd.indexOf("T")+3);
             }
+
         }
-        DecimalFormatSymbols dfs = new DecimalFormatSymbols();
+        DecimalFormat df = new DecimalFormat("#.00");
         value = value / dataLength;
         value = value*100;
         int mean = (int) value;
         minValue *= 100;
         maxValue *= 100;
-
+        String minPrice = df.format(minValue);
+        minPrice = minPrice.replace(".", ",");
+        String maxPrice = df.format(maxValue);
+        maxPrice = maxPrice.replace(".", ",");
         System.out.println(" ");
         System.out.println("medelpris " + mean);
-        System.out.println("lägsta pris " + minValue + " " + minTimeStart + "-" + minTimeEnd);
-        System.out.println("högsta pris " + maxValue + " " + maxTimeStart + "-" + maxTimeEnd);
+        System.out.println("lägsta pris " + minPrice + " " + minTimeStart + "-" + minTimeEnd);
+        System.out.println("högsta pris " + maxPrice + " " + maxTimeStart + "-" + maxTimeEnd);
+
+    }
+
+    //todo fix charging window
+    private static void ChargeWindow(double[] priceArr, String[] timeStart, String[] timeEnd, int dataLength, int hour) {
+        double sum = Double.MIN_VALUE;
+        double windowSum = sum;
+        String startTime = "";
+        String endTime = "";
+        for (int i = 0; i < hour; i++) {
+           sum += priceArr[i];
+        }
+        for (int j = hour; j < dataLength; j++) {
+            windowSum += priceArr[j] - priceArr[j-hour];
+            sum = Math.min(sum, windowSum);
+            startTime = timeStart[j];
+            endTime = timeEnd[j];
+        }
+        sum = (sum / hour)*100;
+        String valueSum= "";
+        DecimalFormat df = new DecimalFormat("#0.00");
+        valueSum = df.format(sum);
+        valueSum = valueSum.replace(".", ",");
+        startTime = startTime.substring(startTime.indexOf("T")+1, startTime.indexOf("T")+3);
+        endTime = endTime.substring(endTime.indexOf("T")+1, endTime.indexOf("T")+3);
+
+        System.out.println("påbörja laddning " + valueSum +" "+ startTime + "-" + endTime);
+
     }
 
     private static int getDataLength(ElpriserAPI elpriserAPI, String date, String zone) {
         int dataLength = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).size();
         return dataLength;
-    }
-
-    private static double getSekPerKWh(ElpriserAPI elpriserAPI, String date, String zone, int a) {
-        return elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(a).sekPerKWh();
     }
 
     public static void helpInfo(){
