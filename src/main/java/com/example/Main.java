@@ -1,17 +1,18 @@
 package com.example;
-
 import com.example.api.ElpriserAPI;
-
 import java.text.DecimalFormat;
-
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Objects;
 
 
 public class Main {
     public static void main(String[] args) {
         ElpriserAPI elpriserAPI = new ElpriserAPI();
         String zone = "";
+        String[] validZones ={"SE1", "SE2", "SE3", "SE4"};
         String date = "";
+        boolean sorted = false;
         String charging = "";
         int hours = 0;
         if (args.length == 0){
@@ -20,12 +21,25 @@ public class Main {
             for (int i = 0; i < args.length; i++){
                 if (args[i].equals("--zone")){
                     zone = args[i+1];
+                    if (zone.equalsIgnoreCase("SE1")){
+                        zone = args[i+1];
+                    }else if (zone.equalsIgnoreCase("SE2")){
+                        zone = args[i+1];
+                    }else if (zone.equalsIgnoreCase("SE3")){
+                        zone = args[i+1];
+                    }else if (zone.equalsIgnoreCase("SE4")){
+                        zone = args[i+1];
+                    }else{
+                        System.out.println("zone is required");
+                        helpInfo();
+                    }
                 }
+
                 else if (args[i].equals("--date")){
                     date = args[i+1];
                 }
                 else if (args[i].equals("--sorted")) {
-                    System.out.println("shall return sorted soon");
+                    sorted = true;
 
                 }else if (args[i].equals("--charging")) {
                     charging = args[i+1];
@@ -37,28 +51,16 @@ public class Main {
         }
         }
         if (!date.isEmpty() && !zone.isEmpty()) {
-            getElpriser(elpriserAPI, date, zone, hours);
+            getElpriser(elpriserAPI, date, zone, hours, sorted);
         }
         if (date.isEmpty() && !zone.isEmpty()) {
-            getElpriser(elpriserAPI, zone, hours);
+            getElpriser(elpriserAPI, zone, hours, sorted);
         }
+
     }
 
 
-    private static void getElpriser(ElpriserAPI elpriserAPI, String date, String zone, int hours) {
-        int dataLength = getDataLength(elpriserAPI, date, zone);
-        double[] priceArr = new double[dataLength];
-        String[] timeStart =  new String[dataLength];
-        String[] timeEnd =  new String[dataLength];
-        for (int i = 0; i < dataLength; i++){
-            priceArr[i] = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).sekPerKWh();
-            timeStart[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
-            timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
-        }
-        printValues(priceArr, timeStart, timeEnd, dataLength, hours);
-    }
-
-    private static void getElpriser(ElpriserAPI elpriserAPI, String zone, int hours) {
+    private static void getElpriser(ElpriserAPI elpriserAPI, String zone, int hours, boolean sorted) {
         String date = LocalDate.now().toString();
         int dataLength = getDataLength(elpriserAPI, date, zone);
         double[] priceArr = new double[dataLength];
@@ -69,8 +71,66 @@ public class Main {
             timeStart[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
             timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
         }
+        if (sorted){
+            sortedData(dataLength, priceArr, timeStart, timeEnd);
+        }
         printValues(priceArr, timeStart, timeEnd, dataLength, hours);
-        ChargeWindow(priceArr, timeStart, dataLength, hours);
+        //ChargeWindow(priceArr, timeStart, dataLength, hours);
+    }
+
+    private static void getElpriser(ElpriserAPI elpriserAPI, String date, String zone, int hours, boolean sorted) {
+        int dataLength = getDataLength(elpriserAPI, date, zone);
+        double[] priceArr = new double[dataLength];
+        String[] timeStart =  new String[dataLength];
+        String[] timeEnd =  new String[dataLength];
+        for (int i = 0; i < dataLength; i++){
+            priceArr[i] = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).sekPerKWh();
+            timeStart[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
+            timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
+        }
+        if (sorted){
+            sortedData(dataLength, priceArr, timeStart, timeEnd);
+        }
+
+        printValues(priceArr, timeStart, timeEnd, dataLength, hours);
+        //ChargeWindow(priceArr, timeStart, dataLength, hours);
+    }
+
+    private static void sortedData(int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd) {
+        String[] sortedArr = new String[dataLength];
+        String[] revArr = new String[dataLength];
+        double[] checkValue = new double[dataLength];
+        for (int i = 0; i < dataLength; i++){
+            checkValue[i] = priceArr[i];
+        }
+        Arrays.sort(priceArr);
+        int index = 0;
+        String startTime = "";
+        String endTime = "";
+        for (int i = 0; i < dataLength; i++){
+            for (int j = 0; j < dataLength; j++){
+                if (priceArr[i] == checkValue[j]) {
+                    index = j;
+                }
+                startTime = timeStart[index];
+                endTime = timeEnd[index];
+                startTime = startTime.substring(startTime.indexOf("T")+1, startTime.indexOf("T")+3);
+                endTime =  endTime.substring(endTime.indexOf("T")+1, endTime.indexOf("T")+3);
+            }
+            double value = priceArr[i];
+            value=value*100;
+            DecimalFormat df = new DecimalFormat("#0.00");
+            String newValue = df.format(value);
+            newValue = newValue.replace(".", ",");
+            revArr[i] = startTime + "-" +  endTime + " " + (newValue) + " öre";
+        }
+
+        int iterator = 0;
+        for (int i = revArr.length; i > 0; i--){
+            sortedArr[iterator] = revArr[i-1];
+            iterator++;
+        }
+        System.out.println(Arrays.toString(sortedArr));
     }
 
     private static void printValues(double[] priceArr, String[] timeStart, String[] timeEnd, int dataLength, int hours) {
