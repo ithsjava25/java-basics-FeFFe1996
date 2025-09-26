@@ -56,7 +56,6 @@ public class Main {
             timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
         }
         printValues(priceArr, timeStart, timeEnd, dataLength, hours);
-        ChargeWindow(priceArr, timeStart, timeEnd, dataLength, hours);
     }
 
     private static void getElpriser(ElpriserAPI elpriserAPI, String zone, int hours) {
@@ -71,7 +70,7 @@ public class Main {
             timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
         }
         printValues(priceArr, timeStart, timeEnd, dataLength, hours);
-        ChargeWindow(priceArr, timeStart, timeEnd, dataLength, hours);
+        ChargeWindow(priceArr, timeStart, dataLength, hours);
     }
 
     private static void printValues(double[] priceArr, String[] timeStart, String[] timeEnd, int dataLength, int hours) {
@@ -113,34 +112,34 @@ public class Main {
         System.out.println("medelpris " + mean);
         System.out.println("lägsta pris " + minPrice + " " + minTimeStart + "-" + minTimeEnd);
         System.out.println("högsta pris " + maxPrice + " " + maxTimeStart + "-" + maxTimeEnd);
-
+        ChargeWindow(priceArr, timeStart, dataLength, hours);
     }
 
     //todo fix charging window
-    private static void ChargeWindow(double[] priceArr, String[] timeStart, String[] timeEnd, int dataLength, int hour) {
+    private static void ChargeWindow(double[] priceArr, String[] timeStart, int dataLength, int hour) {
         double sum = Double.MIN_VALUE;
-        double windowSum = sum;
+        double windowSum = 0.0;
+        double windowAvg = 0.0;
         String startTime = "";
-        String endTime = "";
         for (int i = 0; i < hour; i++) {
-           sum += priceArr[i];
+            sum += priceArr[i];
         }
+        windowSum = sum/hour;
         for (int j = hour; j < dataLength; j++) {
-            windowSum += priceArr[j] - priceArr[j-hour];
-            sum = Math.min(sum, windowSum);
-            startTime = timeStart[j];
-            endTime = timeEnd[j];
+            sum += priceArr[j];
+            sum -= priceArr[j-hour];
+            windowAvg = sum/hour;
+            if(windowAvg < windowSum){
+                windowSum = windowAvg;
+                startTime = timeStart[j];
+            }
         }
-        sum = (sum / hour)*100;
+        sum = windowSum*100;
         String valueSum= "";
         DecimalFormat df = new DecimalFormat("#0.00");
         valueSum = df.format(sum);
         valueSum = valueSum.replace(".", ",");
-        startTime = startTime.substring(startTime.indexOf("T")+1, startTime.indexOf("T")+3);
-        endTime = endTime.substring(endTime.indexOf("T")+1, endTime.indexOf("T")+3);
-
-        System.out.println("påbörja laddning " + valueSum +" "+ startTime + "-" + endTime);
-
+        System.out.println("påbörja laddning " + valueSum +" kl "+ startTime);
     }
 
     private static int getDataLength(ElpriserAPI elpriserAPI, String date, String zone) {
@@ -150,10 +149,10 @@ public class Main {
 
     public static void helpInfo(){
         System.out.println("usage");
-        System.out.println("--zone");
-        System.out.println("--date");
-        System.out.println("--charging");
-        System.out.println("--sorted");
+        System.out.println("--zone for the zone");
+        System.out.println("--date for the date in yyyy-MM-dd");
+        System.out.println("--charging for the charging hours 2, 4, 8");
+        System.out.println("--sorted for a sorted list of prices");
         System.out.println("Zones:");
         System.out.println("SE1");
         System.out.println("SE2");
