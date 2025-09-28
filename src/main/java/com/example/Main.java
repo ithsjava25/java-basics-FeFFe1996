@@ -1,12 +1,13 @@
 package com.example;
 import com.example.api.ElpriserAPI;
 
-import java.text.DateFormat;
-import java.text.DecimalFormat;
-import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Objects;
 
+import java.text.DecimalFormat;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 
 public class Main {
     public static void main(String[] args) {
@@ -14,6 +15,7 @@ public class Main {
         String zone = "";
         String[] validZones ={"SE1", "SE2", "SE3", "SE4"};
         String date = "";
+        boolean zoneIsValid = false;
         boolean sorted = false;
         String charging = "";
         int hours = 0;
@@ -23,34 +25,8 @@ public class Main {
             for (int i = 0; i < args.length; i++){
                 if (args[i].equals("--zone")){
                     zone = args[i+1];
-                    boolean checkIfTrue = false;
                     //todo fix if statement
-                    for (int j = 0; j < validZones.length; j++){
-                        if (zone.equalsIgnoreCase(validZones[j])){
-                            checkIfTrue = true;
-                        } else {
-                            checkIfTrue = false;
-                        }
-                        if (checkIfTrue){
-                            zone = args[i+1];
-                            break;
-                        }
-
-                    }
-                    if (zone.equalsIgnoreCase("SE1")){
-                        zone = args[i+1];
-                    }else if (zone.equalsIgnoreCase("SE2")){
-                        zone = args[i+1];
-                    }else if (zone.equalsIgnoreCase("SE3")){
-                        zone = args[i+1];
-                    }else if (zone.equalsIgnoreCase("SE4")){
-                        zone = args[i+1];
-                    } else if (checkIfTrue == false) {
-                        System.out.println("zone required");
-                        break;
-                    }
-                }
-                else if (args[i].equals("--date")){
+                }  else if (args[i].equals("--date")){
                     date = args[i+1];
                 }
                 else if (args[i].equals("--sorted")) {
@@ -64,20 +40,54 @@ public class Main {
                     helpInfo();
                 }
         }
+            for (int i = 0; i < validZones.length; i++){
+                if (validZones[i].equals(zone)){
+                    zoneIsValid = true;
+                }
+            }
         }
-        if (!date.isEmpty() && !zone.isEmpty()) {
-            getElpriser(elpriserAPI, date, zone, hours, sorted);
+        boolean validateDate = false;
+
+        if (zoneIsValid == false){
+            System.out.println("zone required or invalid zone");
+            System.out.println("your input " + zone);
+        }else{
+            if (date.length() == 0){
+                getElpriser(elpriserAPI, zone, hours, sorted);
+            }else if (date.length() > 0) {
+                validateDate = validDate(date);
+                if (validateDate) {
+                    getElpriser(elpriserAPI, date, zone, hours, sorted);
+                }
+            }
+//            if (!date.isEmpty() && !zone.isEmpty()) {
+//                getElpriser(elpriserAPI, date, zone, hours, sorted);
+//            }
+//            if (date.isEmpty() && !zone.isEmpty()) {
+//                getElpriser(elpriserAPI, zone, hours, sorted);
+//            }
         }
-        if (date.isEmpty() && !zone.isEmpty()) {
-            getElpriser(elpriserAPI, zone, hours, sorted);
-        }
+
 
     }
-
+    private static boolean validDate(String date){
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        try {
+            formatter.parse(date);
+            return true;
+        }
+        catch (DateTimeParseException e){
+            System.out.println("Invalid date");
+            return false;
+        }
+    }
 
     private static void getElpriser(ElpriserAPI elpriserAPI, String zone, int hours, boolean sorted) {
         String date = LocalDate.now().toString();
         int dataLength = getDataLength(elpriserAPI, date, zone);
+        if (dataLength==0){
+            System.out.println("no data");
+        }else{
         double[] priceArr = new double[dataLength];
         String[] timeStart =  new String[dataLength];
         String[] timeEnd =  new String[dataLength];
@@ -90,25 +100,29 @@ public class Main {
             sortedData(dataLength, priceArr, timeStart, timeEnd);
         }
         printValues(priceArr, timeStart, timeEnd, dataLength, hours);
-        //ChargeWindow(priceArr, timeStart, dataLength, hours);
+        ChargeWindow(priceArr, timeStart, dataLength, hours);
+        }
     }
 
     private static void getElpriser(ElpriserAPI elpriserAPI, String date, String zone, int hours, boolean sorted) {
         int dataLength = getDataLength(elpriserAPI, date, zone);
-        double[] priceArr = new double[dataLength];
-        String[] timeStart =  new String[dataLength];
-        String[] timeEnd =  new String[dataLength];
-        for (int i = 0; i < dataLength; i++){
-            priceArr[i] = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).sekPerKWh();
-            timeStart[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
-            timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
+        if (dataLength==0){
+            System.out.println("no data");
+        }else{
+            double[] priceArr = new double[dataLength];
+            String[] timeStart =  new String[dataLength];
+            String[] timeEnd =  new String[dataLength];
+            for (int i = 0; i < dataLength; i++){
+                priceArr[i] = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).sekPerKWh();
+                timeStart[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
+                timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
+            }
+            if (sorted){
+                sortedData(dataLength, priceArr, timeStart, timeEnd);
+            }
+            printValues(priceArr, timeStart, timeEnd, dataLength, hours);
+            ChargeWindow(priceArr, timeStart, dataLength, hours);
         }
-        if (sorted){
-            sortedData(dataLength, priceArr, timeStart, timeEnd);
-        }
-
-        printValues(priceArr, timeStart, timeEnd, dataLength, hours);
-        //ChargeWindow(priceArr, timeStart, dataLength, hours);
     }
 
     private static void sortedData(int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd) {
@@ -209,15 +223,20 @@ public class Main {
             windowAvg = sum/hour;
             if(windowAvg < windowSum){
                 windowSum = windowAvg;
-                startTime = timeStart[j];
+                startTime = timeStart[j-(hour-1)];
             }
         }
+
         sum = windowSum*100;
         String valueSum= "";
         DecimalFormat df = new DecimalFormat("#0.00");
         valueSum = df.format(sum);
         valueSum = valueSum.replace(".", ",");
-        System.out.println("påbörja laddning " + valueSum +" kl "+ startTime);
+
+        startTime = startTime.substring(startTime.indexOf("T")+1, (startTime.indexOf("+")+1));
+        startTime = startTime.replace("+", "");
+        System.out.println("påbörja laddning kl "+ startTime);
+        System.out.println("Medelpris för fönster: "+ valueSum + " öre");
     }
 
     private static int getDataLength(ElpriserAPI elpriserAPI, String date, String zone) {
