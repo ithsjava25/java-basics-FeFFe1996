@@ -90,8 +90,8 @@ public class Main {
         String nextDay = LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd")).plusDays(1).toString();
         int dataLength = getDataLength(elpriserAPI, date, zone);
         int dataLengthNext = getDataLength(elpriserAPI, nextDay, zone);
-        if (dataLength==0){
-            System.out.println("no data available fo next day");
+        if (dataLength == 0){
+            System.out.println("no data available for next day");
         }
         else{
             double[] priceArr = new double[dataLength];
@@ -118,17 +118,11 @@ public class Main {
 
     private static void CheckInputArgs(int hours, boolean sorted, boolean chargingRequest, int dataLengthNext, int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd, double[] priceArrNext, String[] timeStartNext, String[] timeEndNext) {
         if (sorted){
-            if(dataLengthNext > 0){
                 sortedData(dataLength, priceArr, timeStart, timeEnd, priceArrNext, timeStartNext, timeEndNext);
-            }else{sortedData(dataLength, priceArr, timeStart, timeEnd);}
         }
         if (chargingRequest == true){
-            if (dataLengthNext > 0){
                 ChargeWindow(priceArr, timeStart, priceArrNext, timeStartNext, dataLength, hours);
-            }else {
-                ChargeWindow(priceArr, timeStart, dataLength, hours);
             }
-        }
         printValues(priceArr, timeStart, timeEnd, dataLength);
     }
 
@@ -136,32 +130,44 @@ public class Main {
         /***
          * Sort data if next day is avaialble
          */
-        int indexLength = priceArr.length+priceArrNext.length;
-        String[] sortedArr = new String[indexLength];
-        double[] tempArray = new double[indexLength];
-        String[] tempTimeStart = new String[indexLength];
-        String[] tempTimeEnd = new String[indexLength];
-        int iterator = 0;
-        for (int i = 0; i < (indexLength); i++){ //add arrays together for data of current and next day
-            if(i < dataLength){
-                tempArray[i] = priceArr[i];
-                tempTimeStart[i] = timeStart[i];
-                tempTimeEnd[i] = timeEnd[i];
-            }else {
-                tempArray[i] = priceArrNext[iterator];
-                tempTimeStart[i] = timeStartNext[iterator];
-                tempTimeEnd[i] = timeEndNext[iterator];
-                iterator++;
+        if (priceArrNext.length > 0){
+            int indexLength = priceArr.length+priceArrNext.length;
+            String[] sortedArr = new String[indexLength];
+            double[] tempArray = new double[indexLength];
+            String[] tempTimeStart = new String[indexLength];
+            String[] tempTimeEnd = new String[indexLength];
+            int iterator = 0;
+            for (int i = 0; i < (indexLength); i++){ //add arrays together for data of current and next day
+                if(i < dataLength){
+                    tempArray[i] = priceArr[i];
+                    tempTimeStart[i] = timeStart[i];
+                    tempTimeEnd[i] = timeEnd[i];
+                }else {
+                    tempArray[i] = priceArrNext[iterator];
+                    tempTimeStart[i] = timeStartNext[iterator];
+                    tempTimeEnd[i] = timeEndNext[iterator];
+                    iterator++;
+                }
             }
-        }
-        priceArr = tempArray;
-        timeStart = tempTimeStart;
-        timeEnd = tempTimeEnd;
+            priceArr = tempArray;
+            timeStart = tempTimeStart;
+            timeEnd = tempTimeEnd;
+            SortDataHighestToLowest(priceArr, timeStart, timeEnd, indexLength, sortedArr);
 
-        SortDataHighestToLowest(priceArr, timeStart, timeEnd, indexLength, sortedArr);
+            for (int p = 0; p < indexLength; p++){
+                System.out.println(sortedArr[p]);
+            }
+        }else{
+            /***
+             * sort data if next day is unavailable
+             */
+            String[] sortedArr = new String[dataLength];
 
-        for (int p = 0; p < indexLength; p++){
-            System.out.println(sortedArr[p]);
+            SortDataHighestToLowest(priceArr, timeStart, timeEnd, dataLength, sortedArr);
+
+            for (int p = 0; p < dataLength; p++){
+                System.out.println(sortedArr[p]);
+            }
         }
     }
 
@@ -198,20 +204,6 @@ public class Main {
         }
     }
 
-    private static void sortedData(int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd) {
-        /***
-         * sort data if next day is unavailable
-         */
-
-        String[] sortedArr = new String[dataLength];
-
-        SortDataHighestToLowest(priceArr, timeStart, timeEnd, dataLength, sortedArr);
-
-        for (int p = 0; p < dataLength; p++){
-            System.out.println(sortedArr[p]);
-        }
-    }
-
     private static void printValues(double[] priceArr, String[] timeStart, String[] timeEnd, int dataLength) {
         double value = 0;
         double minValue = 1;
@@ -227,7 +219,7 @@ public class Main {
             for (int i = 0; i < dataLength; i++){
                 value += priceArr[i];
             }
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++) { //count hourly prices by adding 4 quarters
                 sum += priceArr[i];
             }
              //for loop to find highest and lowest
@@ -315,68 +307,60 @@ public class Main {
         double windowSum = 0.0;
         double windowAvg = 0.0;
         String startTime = "";
-        int indexLength = priceArr.length+priceArrNext.length;
-        double[] tempArray = new double[indexLength];
-        String[] tempTimeStart = new String[indexLength];
-        int iterator = 0;
-        for (int i = 0; i < (indexLength); i++){
-            if(i <= priceArr.length-1){
-                tempArray[i] = priceArr[i];
-                tempTimeStart[i] = timeStart[i];
-            }else {
-                tempTimeStart[i] = timeStartNext[iterator];
-                tempArray[i] = priceArrNext[iterator];
-                iterator++;
+        if(priceArr.length > 0){
+            int indexLength = priceArr.length+priceArrNext.length;
+            double[] tempArray = new double[indexLength];
+            String[] tempTimeStart = new String[indexLength];
+            int iterator = 0;
+            for (int i = 0; i < (indexLength); i++){
+                if(i <= priceArr.length-1){
+                    tempArray[i] = priceArr[i];
+                    tempTimeStart[i] = timeStart[i];
+                }else {
+                    tempTimeStart[i] = timeStartNext[iterator];
+                    tempArray[i] = priceArrNext[iterator];
+                    iterator++;
+                }
             }
-        }
-        if (dataLength >= 96){
-            hour *= 4;
-        }
-        priceArr = tempArray;
-        timeStart = tempTimeStart;
-        for (int i = 0; i < hour; i++) {
-            sum += priceArr[i];
-        }
-        windowSum = sum/hour;
-        for (int j = hour; j < (indexLength); j++) {
-            sum += priceArr[j];
-            sum -= priceArr[j-hour];
-            windowAvg = sum/hour;
-            if(windowAvg < windowSum){
-                windowSum = windowAvg;
-                startTime = timeStart[j-(hour-1)];
+            if (dataLength >= 96){
+                hour *= 4;
             }
-        }
-        printWindow(sum, windowSum, startTime);
-    }
-
-    private static void ChargeWindow(double[] priceArr, String[] timeStart, int dataLength, int hour) {
-        /***
-         * Chargewindow method if data for next day is unavailable!!
-         ***/
-
-        double sum = Double.MIN_VALUE;
-        double windowSum = 0.0;
-        double windowAvg = 0.0;
-        String startTime = "";
-        if (dataLength >= 96){
-            hour *= 4;
-        }
-        for (int i = 0; i < hour; i++) {
-            sum += priceArr[i];
-        }
-        windowSum = sum/hour;
-        for (int j = hour; j < dataLength; j++) {
-            sum += priceArr[j];
-            sum -= priceArr[j-hour];
-            windowAvg = sum/hour;
-            if(windowAvg < windowSum){
-                windowSum = windowAvg;
-                startTime = timeStart[j-(hour-1)];
+            priceArr = tempArray;
+            timeStart = tempTimeStart;
+            for (int i = 0; i < hour; i++) {
+                sum += priceArr[i];
             }
-        }
+            windowSum = sum/hour;
+            for (int j = hour; j < (indexLength); j++) {
+                sum += priceArr[j];
+                sum -= priceArr[j-hour];
+                windowAvg = sum/hour;
+                if(windowAvg < windowSum){
+                    windowSum = windowAvg;
+                    startTime = timeStart[j-(hour-1)];
+                }
+            }
+            printWindow(sum, windowSum, startTime);
+        } else {
+            if (dataLength >= 96){
+                hour *= 4;
+            }
+            for (int i = 0; i < hour; i++) {
+                sum += priceArr[i];
+            }
+            windowSum = sum/hour;
+            for (int j = hour; j < dataLength; j++) {
+                sum += priceArr[j];
+                sum -= priceArr[j-hour];
+                windowAvg = sum/hour;
+                if(windowAvg < windowSum){
+                    windowSum = windowAvg;
+                    startTime = timeStart[j-(hour-1)];
+                }
+            }
 
-        printWindow(sum, windowSum, startTime);
+            printWindow(sum, windowSum, startTime);
+        }
     }
 
     private static void printWindow(double sum, double windowSum, String startTime) {
@@ -399,18 +383,17 @@ public class Main {
     }
 
     public static void helpInfo(){
-        System.out.println("usage");
-        System.out.println("--zone for the zone");
-        System.out.println("--date for the date in yyyy-MM-dd");
-        System.out.println("--charging for the charging hours 2, 4, 8");
-        System.out.println("--sorted for a sorted list of prices");
-        System.out.println("Zones:");
+        System.out.println("usage:");
+        System.out.println("--zone argument for the zone. Zone must be present to fetch the data");
+        System.out.println("Available zones:");
         System.out.println("SE1");
         System.out.println("SE2");
         System.out.println("SE3");
         System.out.println("SE4");
+        System.out.println("--date for the date in yyyy-MM-dd format.");
+        System.out.println("--charging to check for the optimal charging hours. The hours can be 2, 4, 8");
+        System.out.println("--sorted to sort prices from highest to lowest");
     }
-
 }
 
 
