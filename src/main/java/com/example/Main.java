@@ -43,21 +43,21 @@ public class Main {
                 }
         }
         }
-        for (int i = 0; i < validZones.length; i++){
-            if (validZones[i].equals(zone)){
+        for (String validZone : validZones) {
+            if (validZone.equals(zone)) {
                 zoneIsValid = true;
+                break;
             }
         }
 
         boolean validateDate = false;
 
-        if (zoneIsValid == false){
-            System.out.println("zone required or invalid zone");
-            System.out.println("your input " + zone);
+        if (!zoneIsValid){
+            System.out.println("zone required or invalid zone!! your input was " + zone);
         }else{
-            if (date.length() == 0){
+            if (date.isEmpty()){
                 getElpriser(elpriserAPI, zone, hours, sorted, chargingRequest);
-            }else if (date.length() > 0) {
+            }else {
                 validateDate = validDate(date);
                 if (validateDate) {
                     getElpriser(elpriserAPI, date, zone, hours, sorted, chargingRequest);
@@ -72,7 +72,7 @@ public class Main {
             return true;
         }
         catch (DateTimeParseException e){
-            System.out.println("Invalid date");
+            System.out.println("Invalid date. it should be YYYY-MM-DD");
             return false;
         }
     }
@@ -112,20 +112,24 @@ public class Main {
                 timeStart[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
                 timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
             }
-            if (sorted){
-                if(dataLengthNext > 0){
-                    sortedData(dataLength, priceArr, timeStart, timeEnd, priceArrNext, timeStartNext, timeEndNext);
-                }else{sortedData(dataLength, priceArr, timeStart, timeEnd);}
-            }
-            if (chargingRequest == true){
-                if (dataLengthNext > 0){
-                    ChargeWindow(priceArr, timeStart, priceArrNext,timeStartNext, dataLength, hours);
-                }else {
-                    ChargeWindow(priceArr, timeStart, dataLength, hours);
-                }
-            }
-            printValues(priceArr, timeStart, timeEnd, dataLength);
+            CheckInputArgs(hours, sorted, chargingRequest, dataLengthNext, dataLength, priceArr, timeStart, timeEnd, priceArrNext, timeStartNext, timeEndNext);
         }
+    }
+
+    private static void CheckInputArgs(int hours, boolean sorted, boolean chargingRequest, int dataLengthNext, int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd, double[] priceArrNext, String[] timeStartNext, String[] timeEndNext) {
+        if (sorted){
+            if(dataLengthNext > 0){
+                sortedData(dataLength, priceArr, timeStart, timeEnd, priceArrNext, timeStartNext, timeEndNext);
+            }else{sortedData(dataLength, priceArr, timeStart, timeEnd);}
+        }
+        if (chargingRequest == true){
+            if (dataLengthNext > 0){
+                ChargeWindow(priceArr, timeStart, priceArrNext, timeStartNext, dataLength, hours);
+            }else {
+                ChargeWindow(priceArr, timeStart, dataLength, hours);
+            }
+        }
+        printValues(priceArr, timeStart, timeEnd, dataLength);
     }
 
     private static void sortedData(int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd, double[] priceArrNext, String[] timeStartNext, String[] timeEndNext) {
@@ -134,13 +138,11 @@ public class Main {
          */
         int indexLength = priceArr.length+priceArrNext.length;
         String[] sortedArr = new String[indexLength];
-        String startTime = "";
-        String endTime = "";
         double[] tempArray = new double[indexLength];
         String[] tempTimeStart = new String[indexLength];
         String[] tempTimeEnd = new String[indexLength];
         int iterator = 0;
-        for (int i = 0; i < (indexLength); i++){
+        for (int i = 0; i < (indexLength); i++){ //add arrays together for data of current and next day
             if(i < dataLength){
                 tempArray[i] = priceArr[i];
                 tempTimeStart[i] = timeStart[i];
@@ -156,6 +158,16 @@ public class Main {
         timeStart = tempTimeStart;
         timeEnd = tempTimeEnd;
 
+        SortDataHighestToLowest(priceArr, timeStart, timeEnd, indexLength, sortedArr);
+
+        for (int p = 0; p < indexLength; p++){
+            System.out.println(sortedArr[p]);
+        }
+    }
+
+    private static void SortDataHighestToLowest(double[] priceArr, String[] timeStart, String[] timeEnd, int indexLength, String[] sortedArr) {
+        String startTime;
+        String endTime;
         for (int i = 1; i < indexLength; i++){ //find and sort arrays from highest to lowest with time following
             double currentprice = priceArr[i];
             String currentTimeStart = timeStart[i];
@@ -172,21 +184,17 @@ public class Main {
             timeEnd[j+1] = currentTimeEnd;
         }
 
-            for (int i = 0; i < indexLength; i++){
-                double value = priceArr[i];
-                value=value*100;
-                startTime = timeStart[i];
-                endTime = timeEnd[i];
-                startTime = startTime.substring(startTime.indexOf("T")+1, startTime.indexOf("T")+3);
-                endTime =  endTime.substring(endTime.indexOf("T")+1, endTime.indexOf("T")+3);
-                DecimalFormat df = new DecimalFormat("#0.00");
-                String newValue = df.format(value);
-                newValue = newValue.replace(".", ",");
-                sortedArr[i] = startTime + "-" +  endTime + " " + (newValue) + " öre";
-            }
-
-        for (int p = 0; p < indexLength; p++){
-            System.out.println(sortedArr[p]);
+        for (int i = 0; i < indexLength; i++){
+            double value = priceArr[i];
+            value=value*100;
+            startTime = timeStart[i];
+            endTime = timeEnd[i];
+            startTime = startTime.substring(startTime.indexOf("T")+1, startTime.indexOf("T")+3);
+            endTime =  endTime.substring(endTime.indexOf("T")+1, endTime.indexOf("T")+3);
+            DecimalFormat df = new DecimalFormat("#0.00");
+            String newValue = df.format(value);
+            newValue = newValue.replace(".", ",");
+            sortedArr[i] = startTime + "-" +  endTime + " " + (newValue) + " öre";
         }
     }
 
@@ -196,38 +204,8 @@ public class Main {
          */
 
         String[] sortedArr = new String[dataLength];
-        String[] revArr = new String[dataLength];
-        double[] checkValue = new double[dataLength];
-        for (int i = 0; i < dataLength; i++){
-            checkValue[i] = priceArr[i];
-        }
-        Arrays.sort(priceArr);
-        int index = 0;
-        String startTime = "";
-        String endTime = "";
-        for (int i = 0; i < dataLength; i++){
-            for (int j = 0; j < dataLength; j++){
-                if (priceArr[i] == checkValue[j]) {
-                    index = j;
-                }
-                startTime = timeStart[index];
-                endTime = timeEnd[index];
-                startTime = startTime.substring(startTime.indexOf("T")+1, startTime.indexOf("T")+3);
-                endTime =  endTime.substring(endTime.indexOf("T")+1, endTime.indexOf("T")+3);
-            }
-            double value = priceArr[i];
-            value=value*100;
-            DecimalFormat df = new DecimalFormat("#0.00");
-            String newValue = df.format(value);
-            newValue = newValue.replace(".", ",");
-            revArr[i] = startTime + "-" +  endTime + " " + (newValue) + " öre";
-        }
 
-        int iterator = 0;
-        for (int i = revArr.length; i > 0; i--){
-            sortedArr[iterator] = revArr[i-1];
-            iterator++;
-        }
+        SortDataHighestToLowest(priceArr, timeStart, timeEnd, dataLength, sortedArr);
 
         for (int p = 0; p < dataLength; p++){
             System.out.println(sortedArr[p]);
