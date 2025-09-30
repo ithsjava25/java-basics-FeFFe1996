@@ -305,9 +305,6 @@ public class Main {
     }
 
     private static void ChargeWindow(double[] priceArr, String[] timeStart, double[]priceArrNext, String[] timeStartNext, int dataLength, int hour) {
-        /***
-         * Chargewindow method if data for next day is available!!
-         ***/
         double sum = 0.0;
         String startTime = "";
         if(priceArr.length > 0){
