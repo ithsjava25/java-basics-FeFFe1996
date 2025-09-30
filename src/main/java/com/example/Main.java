@@ -1,13 +1,8 @@
 package com.example;
 import com.example.api.ElpriserAPI;
-
-
 import java.text.DecimalFormat;
-
 import java.time.LocalDate;
-
 import java.time.LocalTime;
-
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
@@ -34,21 +29,17 @@ public class Main {
 //            date = sc.nextLine();
         } else{
             for (int i = 0; i < args.length; i++){
-                if (args[i].equals("--zone")){
-                    zone = args[i+1];
-                }  else if (args[i].equals("--date")){
-                    date = args[i+1];
-                }
-                else if (args[i].equals("--sorted")) {
-                    sorted = true;
-
-                }else if (args[i].equals("--charging")) {
-                    charging = args[i+1];
-                    hours = Integer.parseInt(charging.substring(0, 1));
-                    chargingRequest = true;
-                }
-                else if (args[i].equals("--help")) {
-                    helpInfo();
+                switch (args[i]) {
+                    case "--zone" -> zone = args[i + 1];
+                    case "--date" -> date = args[i + 1];
+                    case "--sorted" -> sorted = true;
+                    case "--charging" -> {
+                        charging = args[i + 1];
+                        charging = charging.replaceAll("[H, h]", "");
+                        hours = Integer.parseInt(charging);
+                        chargingRequest = true;
+                    }
+                    case "--help" -> helpInfo();
                 }
         }
         }
@@ -100,7 +91,7 @@ public class Main {
         int dataLength = getDataLength(elpriserAPI, date, zone);
         int dataLengthNext = getDataLength(elpriserAPI, nextDay, zone);
         if (dataLength==0){
-            System.out.println("no data");
+            System.out.println("no data available fo next day");
         }
         else{
             double[] priceArr = new double[dataLength];
@@ -138,6 +129,9 @@ public class Main {
     }
 
     private static void sortedData(int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd, double[] priceArrNext, String[] timeStartNext, String[] timeEndNext) {
+        /***
+         * Sort data if next day is avaialble
+         */
         int indexLength = priceArr.length+priceArrNext.length;
         String[] sortedArr = new String[indexLength];
         String startTime = "";
@@ -197,6 +191,10 @@ public class Main {
     }
 
     private static void sortedData(int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd) {
+        /***
+         * sort data if next day is unavailable
+         */
+
         String[] sortedArr = new String[dataLength];
         String[] revArr = new String[dataLength];
         double[] checkValue = new double[dataLength];
@@ -241,7 +239,6 @@ public class Main {
         double minValue = 1;
         double maxValue = 0;
         double sum = Double.MIN_VALUE;
-        double sumMax = Double.MIN_VALUE;
         double windowSum = 0.0;
         double windowAvg = 0.0;
         String minTimeStart = "";
@@ -311,9 +308,13 @@ public class Main {
         }
         }
 
+        formatDataForPrint(dataLength, value, minValue, maxValue, minTimeStart, minTimeEnd, maxTimeStart, maxTimeEnd);
+    }
+
+    private static void formatDataForPrint(int dataLength, double value, double minValue, double maxValue, String minTimeStart, String minTimeEnd, String maxTimeStart, String maxTimeEnd) {
         DecimalFormat df = new DecimalFormat("#.00");
         value = value / dataLength;
-        value = value*100;
+        value = value *100;
         String mean = df.format(value);
         mean = mean.replace(".", ",");
         minValue *= 100;
@@ -329,6 +330,9 @@ public class Main {
     }
 
     private static void ChargeWindow(double[] priceArr, String[] timeStart, double[]priceArrNext, String[] timeStartNext, int dataLength, int hour) {
+        /***
+         * Chargewindow method if data for next day is available!!
+         ***/
         double sum = Double.MIN_VALUE;
         double windowSum = 0.0;
         double windowAvg = 0.0;
@@ -365,19 +369,14 @@ public class Main {
                 startTime = timeStart[j-(hour-1)];
             }
         }
-        sum = windowSum*100;
-        String valueSum= "";
-        DecimalFormat df = new DecimalFormat("#0.00");
-        valueSum = df.format(sum);
-        valueSum = valueSum.replace(".", ",");
-
-        startTime = startTime.substring(startTime.indexOf("T")+1, (startTime.indexOf("+")+1));
-        startTime = startTime.replace("+", "");
-
-        System.out.println("Påbörja laddning kl "+ startTime +" Medelpris för fönster: "+ valueSum + " öre");
+        printWindow(sum, windowSum, startTime);
     }
 
     private static void ChargeWindow(double[] priceArr, String[] timeStart, int dataLength, int hour) {
+        /***
+         * Chargewindow method if data for next day is unavailable!!
+         ***/
+
         double sum = Double.MIN_VALUE;
         double windowSum = 0.0;
         double windowAvg = 0.0;
@@ -399,16 +398,21 @@ public class Main {
             }
         }
 
-        sum = windowSum*100;
-        String valueSum= "";
+        printWindow(sum, windowSum, startTime);
+    }
+
+    private static void printWindow(double sum, double windowSum, String startTime) {
+
+        sum = windowSum * 100;
+        String valueSum = "";
         DecimalFormat df = new DecimalFormat("#0.00");
         valueSum = df.format(sum);
         valueSum = valueSum.replace(".", ",");
 
-        startTime = startTime.substring(startTime.indexOf("T")+1, (startTime.indexOf("+")+1));
+        startTime = startTime.substring(startTime.indexOf("T") + 1, (startTime.indexOf("+") + 1));
         startTime = startTime.replace("+", "");
-        System.out.println("Påbörja laddning"+ startTime);
-        System.out.println("Medelpris för fönster: "+ valueSum + " öre");
+        System.out.println(" ");
+        System.out.println("Påbörja laddning kl " + startTime + " Medelpris för fönster: " + valueSum + " öre");
     }
 
     private static int getDataLength(ElpriserAPI elpriserAPI, String date, String zone) {
