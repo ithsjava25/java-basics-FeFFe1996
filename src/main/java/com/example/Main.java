@@ -3,10 +3,9 @@ import com.example.api.ElpriserAPI;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Arrays;
-import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
@@ -194,9 +193,12 @@ public class Main {
             double value = priceArr[i];
             value=value*100;
             startTime = timeStart[i];
-            endTime = timeEnd[i];
-            startTime = startTime.substring(startTime.indexOf("T")+1, startTime.indexOf("T")+3);
-            endTime =  endTime.substring(endTime.indexOf("T")+1, endTime.indexOf("T")+3);
+            OffsetDateTime timeGet = OffsetDateTime.parse(startTime);
+            LocalTime Time = timeGet.toLocalTime();
+            endTime = Time.plusHours(1).toString();
+            startTime = Time.toString();
+            startTime  = startTime .substring(0,2);
+            endTime = endTime.substring(0,2);
             DecimalFormat df = new DecimalFormat("#0.00");
             String newValue = df.format(value);
             newValue = newValue.replace(".", ",");
@@ -237,18 +239,19 @@ public class Main {
                 if(minValue > windowSum){
                     minValue = windowSum;
                     minTimeStart = timeStart[j];
-                    minTimeStart = minTimeStart.substring(minTimeStart.indexOf("T")+1, minTimeStart.indexOf("+"));
-                    LocalTime Time = LocalTime.parse(minTimeStart);
-                    minTimeStart = Time.minusHours(1).toString();
+                    OffsetDateTime timeGet = OffsetDateTime.parse(minTimeStart);
+                    LocalTime Time = timeGet.toLocalTime();
                     minTimeEnd = Time.toString();
+                    minTimeStart = Time.minusHours(1).toString();
                     minTimeStart = minTimeStart.substring(0,2);
                     minTimeEnd = minTimeEnd.substring(0,2);
 
                 } if(maxValue > windowSum){
                     maxTimeStart = timeStart[j];
-                    maxTimeStart = maxTimeStart.substring(maxTimeStart.indexOf("T")+1, maxTimeStart.indexOf("+"));
-                    LocalTime Time = LocalTime.parse(maxTimeStart);
+                    OffsetDateTime timeGet = OffsetDateTime.parse(maxTimeStart);
+                    LocalTime Time = timeGet.toLocalTime();
                     maxTimeEnd = Time.plusHours(1).toString();
+                    maxTimeStart = Time.toString();
                     maxTimeStart = maxTimeStart.substring(0,2);
                     maxTimeEnd = maxTimeEnd.substring(0,2);
                 }
@@ -260,18 +263,20 @@ public class Main {
             if(minValue > priceArr[a]){
                 minValue = priceArr[a];
                 minTimeStart = timeStart[a];
-                minTimeStart = minTimeStart.substring(minTimeStart.indexOf("T")+1, minTimeStart.indexOf("+"));
-                LocalTime Time = LocalTime.parse(minTimeStart);
+                OffsetDateTime timeGet = OffsetDateTime.parse(minTimeStart);
+                LocalTime Time = timeGet.toLocalTime();
                 minTimeEnd = Time.plusHours(1).toString();
+                minTimeStart = Time.toString();
                 minTimeStart = minTimeStart.substring(0,2);
                 minTimeEnd = minTimeEnd.substring(0,2);
 
             } if(maxValue < priceArr[a]){
                 maxValue = priceArr[a];
                 maxTimeStart = timeStart[a];
-                maxTimeStart = maxTimeStart.substring(maxTimeStart.indexOf("T")+1, maxTimeStart.indexOf("+"));
-                LocalTime Time = LocalTime.parse(maxTimeStart);
+                OffsetDateTime timeGet = OffsetDateTime.parse(maxTimeStart);
+                LocalTime Time = timeGet.toLocalTime();
                 maxTimeEnd = Time.plusHours(1).toString();
+                maxTimeStart = Time.toString();
                 maxTimeStart = maxTimeStart.substring(0,2);
                 maxTimeEnd = maxTimeEnd.substring(0,2);
             }
@@ -331,7 +336,7 @@ public class Main {
                 sum += priceArr[i];
             }
             windowSum = sum/hour;
-            for (int j = hour; j < (indexLength); j++) {
+            for (int j = hour; j < indexLength; j++) {
                 sum += priceArr[j];
                 sum -= priceArr[j-hour];
                 windowAvg = sum/hour;
@@ -340,7 +345,8 @@ public class Main {
                     startTime = timeStart[j-(hour-1)];
                 }
             }
-            printWindow(sum, windowSum, startTime);
+            printWindow(windowSum, startTime);
+
         } else {
             if (dataLength >= 96){
                 hour *= 4;
@@ -359,13 +365,13 @@ public class Main {
                 }
             }
 
-            printWindow(sum, windowSum, startTime);
+            printWindow(windowSum, startTime);
         }
     }
 
-    private static void printWindow(double sum, double windowSum, String startTime) {
+    private static void printWindow(double windowSum, String startTime) {
 
-        sum = windowSum * 100;
+        double sum = windowSum * 100;
         String valueSum = "";
         DecimalFormat df = new DecimalFormat("#0.00");
         valueSum = df.format(sum);
