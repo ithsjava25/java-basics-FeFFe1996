@@ -16,7 +16,7 @@ public class Main {
         boolean zoneIsValid = false;
         boolean sorted = false;
         boolean chargingRequest = false;
-        String charging = "";
+        String charging;
         int hours = 0;
 
         if (args.length == 0) {
@@ -49,7 +49,7 @@ public class Main {
             }
         }
 
-        boolean validateDate = false;
+        boolean validateDate;
 
         if (!zoneIsValid){
             System.out.println("zone required or invalid zone!! your input was " + zone);
@@ -100,26 +100,26 @@ public class Main {
             String[] timeStartNext =  new String[dataLengthNext];
             String[] timeEndNext =  new String[dataLengthNext];
             if(dataLengthNext > 0){
-                for (int i = 0; i < dataLengthNext; i++){
-                    priceArrNext[i] = elpriserAPI.getPriser(nextDay, ElpriserAPI.Prisklass.valueOf(zone)).get(i).sekPerKWh();
-                    timeStartNext[i] = String.valueOf(elpriserAPI.getPriser(nextDay, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
-                    timeEndNext[i] = String.valueOf(elpriserAPI.getPriser(nextDay, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
-                }
+                GetPriceArrays(elpriserAPI, nextDay, zone, dataLengthNext, priceArrNext, timeStartNext, timeEndNext);
             }
-            for (int i = 0; i < dataLength; i++){
-                priceArr[i] = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).sekPerKWh();
-                timeStart[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
-                timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
-            }
-            CheckInputArgs(hours, sorted, chargingRequest, dataLengthNext, dataLength, priceArr, timeStart, timeEnd, priceArrNext, timeStartNext, timeEndNext);
+            GetPriceArrays(elpriserAPI, date, zone, dataLength, priceArr, timeStart, timeEnd);
+            CheckInputArgs(hours, sorted, chargingRequest, dataLength, priceArr, timeStart, timeEnd, priceArrNext, timeStartNext, timeEndNext);
         }
     }
 
-    private static void CheckInputArgs(int hours, boolean sorted, boolean chargingRequest, int dataLengthNext, int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd, double[] priceArrNext, String[] timeStartNext, String[] timeEndNext) {
+    private static void GetPriceArrays(ElpriserAPI elpriserAPI, String date, String zone, int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd) {
+        for (int i = 0; i < dataLength; i++){
+            priceArr[i] = elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).sekPerKWh();
+            timeStart[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeStart());
+            timeEnd[i] = String.valueOf(elpriserAPI.getPriser(date, ElpriserAPI.Prisklass.valueOf(zone)).get(i).timeEnd());
+        }
+    }
+
+    private static void CheckInputArgs(int hours, boolean sorted, boolean chargingRequest, int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd, double[] priceArrNext, String[] timeStartNext, String[] timeEndNext) {
         if (sorted){
                 sortedData(dataLength, priceArr, timeStart, timeEnd, priceArrNext, timeStartNext, timeEndNext);
         }
-        if (chargingRequest == true){
+        if (chargingRequest){
                 ChargeWindow(priceArr, timeStart, priceArrNext, timeStartNext, dataLength, hours);
             }
         printValues(priceArr, timeStart, timeEnd, dataLength);
@@ -308,9 +308,7 @@ public class Main {
         /***
          * Chargewindow method if data for next day is available!!
          ***/
-        double sum = Double.MIN_VALUE;
-        double windowSum = 0.0;
-        double windowAvg = 0.0;
+        double sum = 0.0;
         String startTime = "";
         if(priceArr.length > 0){
             int indexLength = priceArr.length+priceArrNext.length;
@@ -332,41 +330,33 @@ public class Main {
             }
             priceArr = tempArray;
             timeStart = tempTimeStart;
-            for (int i = 0; i < hour; i++) {
-                sum += priceArr[i];
-            }
-            windowSum = sum/hour;
-            for (int j = hour; j < indexLength; j++) {
-                sum += priceArr[j];
-                sum -= priceArr[j-hour];
-                windowAvg = sum/hour;
-                if(windowAvg < windowSum){
-                    windowSum = windowAvg;
-                    startTime = timeStart[j-(hour-1)];
-                }
-            }
-            printWindow(windowSum, startTime);
+            WindowValue(priceArr, timeStart, hour, sum, startTime, indexLength);
 
         } else {
             if (dataLength >= 96){
                 hour *= 4;
             }
-            for (int i = 0; i < hour; i++) {
-                sum += priceArr[i];
-            }
-            windowSum = sum/hour;
-            for (int j = hour; j < dataLength; j++) {
-                sum += priceArr[j];
-                sum -= priceArr[j-hour];
-                windowAvg = sum/hour;
-                if(windowAvg < windowSum){
-                    windowSum = windowAvg;
-                    startTime = timeStart[j-(hour-1)];
-                }
-            }
-
-            printWindow(windowSum, startTime);
+            WindowValue(priceArr, timeStart, hour, sum, startTime, dataLength);
         }
+    }
+
+    private static void WindowValue(double[] priceArr, String[] timeStart, int hour, double sum, String startTime, int indexLength) {
+        double windowSum;
+        double windowAvg;
+        for (int i = 0; i < hour; i++) {
+            sum += priceArr[i];
+        }
+        windowSum = sum/hour;
+        for (int j = hour; j < indexLength; j++) {
+            sum += priceArr[j];
+            sum -= priceArr[j-hour];
+            windowAvg = sum/hour;
+            if(windowAvg < windowSum){
+                windowSum = windowAvg;
+                startTime = timeStart[j-(hour-1)];
+            }
+        }
+        printWindow(windowSum, startTime);
     }
 
     private static void printWindow(double windowSum, String startTime) {
