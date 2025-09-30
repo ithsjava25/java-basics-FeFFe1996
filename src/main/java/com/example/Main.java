@@ -11,6 +11,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
@@ -23,13 +24,18 @@ public class Main {
         boolean chargingRequest = false;
         String charging = "";
         int hours = 0;
-        if (args.length == 0){
+
+        if (args.length == 0) {
             helpInfo();
+//            Scanner sc = new Scanner(System.in);
+//            System.out.println("Enter Zone Name:");
+//            zone = sc.nextLine();
+//            System.out.println("Enter Date or press enter for current date:" );
+//            date = sc.nextLine();
         } else{
             for (int i = 0; i < args.length; i++){
                 if (args[i].equals("--zone")){
                     zone = args[i+1];
-                    //todo fix if statement
                 }  else if (args[i].equals("--date")){
                     date = args[i+1];
                 }
@@ -45,12 +51,13 @@ public class Main {
                     helpInfo();
                 }
         }
-            for (int i = 0; i < validZones.length; i++){
-                if (validZones[i].equals(zone)){
-                    zoneIsValid = true;
-                }
+        }
+        for (int i = 0; i < validZones.length; i++){
+            if (validZones[i].equals(zone)){
+                zoneIsValid = true;
             }
         }
+
         boolean validateDate = false;
 
         if (zoneIsValid == false){
@@ -129,12 +136,10 @@ public class Main {
             printValues(priceArr, timeStart, timeEnd, dataLength);
         }
     }
+
     private static void sortedData(int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd, double[] priceArrNext, String[] timeStartNext, String[] timeEndNext) {
         int indexLength = priceArr.length+priceArrNext.length;
         String[] sortedArr = new String[indexLength];
-        String[] revArr = new String[indexLength];
-        double[] checkValue = new double[indexLength];
-        int index = 0;
         String startTime = "";
         String endTime = "";
         double[] tempArray = new double[indexLength];
@@ -156,33 +161,35 @@ public class Main {
         priceArr = tempArray;
         timeStart = tempTimeStart;
         timeEnd = tempTimeEnd;
-        Arrays.sort(priceArr);
-        for (int i = 0; i < indexLength; i++){
-            checkValue[i] = priceArr[i];
-        }
-        for (int i = 0; i < indexLength; i++){
-            for (int j = 0; j < indexLength; j++){
-                if (priceArr[i] == checkValue[j]) {
-                    index = j;
-                }
-                startTime = timeStart[index];
-                endTime = timeEnd[index];
-                startTime = startTime.substring(startTime.indexOf("T")+1, startTime.indexOf("T")+3);
-                endTime =  endTime.substring(endTime.indexOf("T")+1, endTime.indexOf("T")+3);
+
+        for (int i = 1; i < indexLength; i++){ //find and sort arrays from highest to lowest with time following
+            double currentprice = priceArr[i];
+            String currentTimeStart = timeStart[i];
+            String currentTimeEnd = timeEnd[i];
+            int j = i-1;
+            while(j >= 0 && priceArr[j] < currentprice){
+                priceArr[j+1] = priceArr[j];
+                timeStart[j+1] = timeStart[j];
+                timeEnd[j+1] = timeEnd[j];
+                j--;
             }
-            double value = priceArr[i];
-            value=value*100;
-            DecimalFormat df = new DecimalFormat("#0.00");
-            String newValue = df.format(value);
-            newValue = newValue.replace(".", ",");
-            revArr[i] = startTime + "-" +  endTime + " " + (newValue) + " öre";
+            priceArr[j+1] = currentprice;
+            timeStart[j+1] = currentTimeStart;
+            timeEnd[j+1] = currentTimeEnd;
         }
 
-        int iteratTwo = 0;
-        for (int i = revArr.length; i > 0; i--){
-            sortedArr[iteratTwo] = revArr[i-1];
-            iteratTwo++;
-        }
+            for (int i = 0; i < indexLength; i++){
+                double value = priceArr[i];
+                value=value*100;
+                startTime = timeStart[i];
+                endTime = timeEnd[i];
+                startTime = startTime.substring(startTime.indexOf("T")+1, startTime.indexOf("T")+3);
+                endTime =  endTime.substring(endTime.indexOf("T")+1, endTime.indexOf("T")+3);
+                DecimalFormat df = new DecimalFormat("#0.00");
+                String newValue = df.format(value);
+                newValue = newValue.replace(".", ",");
+                sortedArr[i] = startTime + "-" +  endTime + " " + (newValue) + " öre";
+            }
 
         for (int p = 0; p < indexLength; p++){
             System.out.println(sortedArr[p]);
@@ -321,7 +328,6 @@ public class Main {
         System.out.println("högsta pris " + maxPrice + " " + maxTimeStart + "-" + maxTimeEnd);
     }
 
-    //todo fix charging window
     private static void ChargeWindow(double[] priceArr, String[] timeStart, double[]priceArrNext, String[] timeStartNext, int dataLength, int hour) {
         double sum = Double.MIN_VALUE;
         double windowSum = 0.0;
@@ -340,6 +346,9 @@ public class Main {
                 tempArray[i] = priceArrNext[iterator];
                 iterator++;
             }
+        }
+        if (dataLength >= 96){
+            hour *= 4;
         }
         priceArr = tempArray;
         timeStart = tempTimeStart;
@@ -373,6 +382,9 @@ public class Main {
         double windowSum = 0.0;
         double windowAvg = 0.0;
         String startTime = "";
+        if (dataLength >= 96){
+            hour *= 4;
+        }
         for (int i = 0; i < hour; i++) {
             sum += priceArr[i];
         }
