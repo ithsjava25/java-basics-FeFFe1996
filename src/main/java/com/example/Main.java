@@ -122,7 +122,7 @@ public class Main {
         if (chargingRequest){
                 ChargeWindow(priceArr, timeStart, priceArrNext, timeStartNext, dataLength, hours);
             }
-        printValues(priceArr, timeStart, timeEnd, dataLength);
+        printValues(priceArr, timeStart,  dataLength);
     }
 
     private static void sortedData(int dataLength, double[] priceArr, String[] timeStart, String[] timeEnd, double[] priceArrNext, String[] timeStartNext, String[] timeEndNext) {
@@ -206,7 +206,7 @@ public class Main {
         }
     }
 
-    private static void printValues(double[] priceArr, String[] timeStart, String[] timeEnd, int dataLength) {
+    private static void printValues(double[] priceArr, String[] timeStart, int dataLength) {
         double value = 0;
         double minValue = 1;
         double maxValue = 0;
@@ -218,7 +218,7 @@ public class Main {
         String maxTimeStart = "";
         String maxTimeEnd = "";
         if (dataLength >= 96){
-            for (int i = 0; i < dataLength; i++){
+            for (int i = 0; i < dataLength; i++){ //addera och hämta medelpriset
                 value += priceArr[i];
             }
             for (int i = 0; i < 4; i++) { //count hourly prices by adding 4 quarters
@@ -232,10 +232,9 @@ public class Main {
                     windowAvg = sum/4;
                     if(windowAvg < windowSum){
                         windowSum = windowAvg;
-                    }else if(windowAvg > maxValue){
+                    }else {
                         maxValue = windowAvg;
                     }
-
                 if(minValue > windowSum){
                     minValue = windowSum;
                     minTimeStart = timeStart[j];
@@ -245,8 +244,8 @@ public class Main {
                     minTimeStart = Time.minusHours(1).toString();
                     minTimeStart = minTimeStart.substring(0,2);
                     minTimeEnd = minTimeEnd.substring(0,2);
-
-                } if(maxValue > windowSum){
+                }
+                else{
                     maxTimeStart = timeStart[j];
                     OffsetDateTime timeGet = OffsetDateTime.parse(maxTimeStart);
                     LocalTime Time = timeGet.toLocalTime();
@@ -254,10 +253,8 @@ public class Main {
                     maxTimeStart = Time.toString();
                     maxTimeStart = maxTimeStart.substring(0,2);
                     maxTimeEnd = maxTimeEnd.substring(0,2);
-                }
-
+                    }
             }
-
         }else {for (int a = 0; a < dataLength; a++) { //for loop to add the values of pricesArray
             value += priceArr[a];
             if(minValue > priceArr[a]){
