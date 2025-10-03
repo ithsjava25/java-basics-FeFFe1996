@@ -220,6 +220,16 @@ public class Main {
         if (dataLength >= 96){
             for (int i = 0; i < dataLength; i++){ //addera och hämta medelpriset
                 value += priceArr[i];
+                if(maxValue < priceArr[i]){ //find the timeslot of the highest value
+                    maxValue = priceArr[i];
+                    maxTimeStart = timeStart[i];
+                    OffsetDateTime timeGet = OffsetDateTime.parse(maxTimeStart);
+                    LocalTime Time = timeGet.toLocalTime();
+                    maxTimeEnd = Time.plusHours(1).toString();
+                    maxTimeStart = Time.toString();
+                    maxTimeStart = maxTimeStart.substring(0,2);
+                    maxTimeEnd = maxTimeEnd.substring(0,2);
+                }
             }
             for (int i = 0; i < 4; i++) { //count hourly prices by adding 4 quarters
                 sum += priceArr[i];
@@ -235,7 +245,7 @@ public class Main {
                     }else {
                         maxValue = windowAvg;
                     }
-                if(minValue > windowSum){
+                if(minValue > windowSum){ //find the time of the lowest value
                     minValue = windowSum;
                     minTimeStart = timeStart[j];
                     OffsetDateTime timeGet = OffsetDateTime.parse(minTimeStart);
@@ -245,15 +255,6 @@ public class Main {
                     minTimeStart = minTimeStart.substring(0,2);
                     minTimeEnd = minTimeEnd.substring(0,2);
                 }
-                else{
-                    maxTimeStart = timeStart[j];
-                    OffsetDateTime timeGet = OffsetDateTime.parse(maxTimeStart);
-                    LocalTime Time = timeGet.toLocalTime();
-                    maxTimeEnd = Time.plusHours(1).toString();
-                    maxTimeStart = Time.toString();
-                    maxTimeStart = maxTimeStart.substring(0,2);
-                    maxTimeEnd = maxTimeEnd.substring(0,2);
-                    }
             }
         }else {for (int a = 0; a < dataLength; a++) { //for loop to add the values of pricesArray
             value += priceArr[a];
